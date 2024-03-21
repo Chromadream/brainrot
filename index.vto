@@ -1,5 +1,5 @@
 ---
-title: Rin's brainrot
+title: Jon's brainrot
 layout: layout.vto
 ---
 
@@ -8,7 +8,7 @@ layout: layout.vto
     {{ for key, item of youtube.items }}
       <tr>
         <td> {{ parseInt(key) + 1 }} </td>
-        <td> <img src="{{item.thumbnail}}" /> </td>
+        <td> <img src="{{item.thumbnail}}" style="width: 100px;"/> </td>
         <td> <a href="https://www.youtube.com/watch?v={{item.id}}">{{item.author}} - {{item.title}}</a>
       </tr>
     {{ /for }}
@@ -16,6 +16,10 @@ layout: layout.vto
 </table>
 <footer>
   <p>
-    {{youtube.lastUpdated}}
+    Last update checked at: {{(new Date()).toLocaleString('en-AU', {timeZone: "Australia/Melbourne"})}}.
+    <br />
+    Update is performed every midnight, UTC.
+    <br />
+    Check the playlist <a href="https://www.youtube.com/playlist?list=PLbiAZv0qcXO0mJNjtJ4Gdjb_T6ZZUnD8M">here</a>.
   </p>
 </footer>
