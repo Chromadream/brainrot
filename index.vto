@@ -1,0 +1,21 @@
+---
+title: Rin's brainrot
+layout: layout.vto
+---
+
+<table>
+  <tbody>
+    {{ for key, item of youtube.items }}
+      <tr>
+        <td> {{ parseInt(key) + 1 }} </td>
+        <td> <img src="{{item.thumbnail}}" /> </td>
+        <td> <a href="https://www.youtube.com/watch?v={{item.id}}">{{item.author}} - {{item.title}}</a>
+      </tr>
+    {{ /for }}
+  </tbody>
+</table>
+<footer>
+  <p>
+    {{youtube.lastUpdated}}
+  </p>
+</footer>
