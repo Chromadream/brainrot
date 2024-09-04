@@ -1,4 +1,4 @@
-import { Innertube } from "https://deno.land/x/youtubei@v9.1.0-deno/deno.ts";
+import { Innertube } from 'https://deno.land/x/youtubei/deno.ts';
 
 const youtube = await Innertube.create();
 
