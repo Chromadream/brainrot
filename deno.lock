@@ -43,7 +43,7 @@
     "npm:meriyah@4.4.0": "4.4.0",
     "npm:meriyah@6.0.5": "6.0.5",
     "npm:octokit@*": "4.1.3_@octokit+core@6.1.5",
-    "npm:youtubei.js@^13.4.0": "13.4.0"
+    "npm:youtubei.js@13.3.0": "13.3.0"
   },
   "jsr": {
     "@davidbonnet/astring@1.8.6": {
@@ -469,8 +469,8 @@
     "universal-user-agent@7.0.2": {
       "integrity": "sha512-0JCqzSKnStlRRQfCdowvqy3cy0Dvtlb8xecj/H8JFZuCze4rwjPZQOgvFvn0Ws/usCHQFGpyr+pB9adaGwXn4Q=="
     },
-    "youtubei.js@13.4.0": {
-      "integrity": "sha512-+fmIZU/dWAjsROONrASy1REwVpy6umAPVuoNLr/4iNmZXl84LyBef0n3hrd1Vn9035EuINToGyQcBmifwUEemA==",
+    "youtubei.js@13.3.0": {
+      "integrity": "sha512-tbl7rxltpgKoSsmfGUe9JqWUAzv6HFLqrOn0N85EbTn5DLt24EXrjClnXdxyr3PBARMJ3LC4vbll100a0ABsYw==",
       "dependencies": [
         "@bufbuild/protobuf",
         "jintr",
@@ -1246,7 +1246,7 @@
   "workspace": {
     "dependencies": [
       "npm:@bufbuild/protobuf@*",
-      "npm:youtubei.js@^13.4.0"
+      "npm:youtubei.js@13.3.0"
     ]
   }
 }
