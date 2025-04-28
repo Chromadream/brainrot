@@ -1,4 +1,4 @@
-import { Innertube } from 'youtubei/deno.ts';
+import { Innertube, YTNodes } from 'youtubei.js';
 
 const youtube = await Innertube.create();
 
@@ -10,7 +10,7 @@ const lastUpdated = playlist.info.last_updated;
 
 const items =
   (await Promise.all(
-    playlist.items.slice(0,5).map((item) => youtube.music.getInfo(item.id)),
+    playlist.items.slice(0,5).map(item => item.as(YTNodes.PlaylistVideo)).map((item) => youtube.music.getInfo(item.id)),
   ))
     .map((item) => item.basic_info)
     .map((item) => ({
