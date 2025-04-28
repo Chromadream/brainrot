@@ -8,7 +8,7 @@ const playlist = await youtube.getPlaylist(
 
 const lastUpdated = playlist.info.last_updated;
 
-const temporary_items = await Promise.all(
+const temporary_items = Promise.all(
   playlist.items.slice(0,5).map(item => item.as(YTNodes.PlaylistVideo)).map(async (item) => {
     try {
       const info = await youtube.music.getInfo(item.id);
@@ -21,7 +21,7 @@ const temporary_items = await Promise.all(
   })
 );
 
-const items = temporary_items
+const items = (await  temporary_items)
     .map((item) => item!.basic_info)
     .map((item) => ({
     id: item.id,
