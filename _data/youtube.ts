@@ -1,6 +1,11 @@
-import { Innertube, YTNodes } from 'youtubei.js';
+import { Innertube, UniversalCache, YTNodes } from 'youtubei.js';
 
-const youtube = await Innertube.create({ retrieve_player: false });
+const youtube = await Innertube.create({ retrieve_player: false, cache: new UniversalCache(
+  // Enables persistent caching
+  true, 
+  // Path to the cache directory. The directory will be created if it doesn't exist
+  './.cache' 
+) });
 
 const playlist = await youtube.getPlaylist(
   "PLbiAZv0qcXO0mJNjtJ4Gdjb_T6ZZUnD8M",
