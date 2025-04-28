@@ -1,6 +1,6 @@
 import { Innertube, YTNodes } from 'youtubei.js';
 
-const youtube = await Innertube.create();
+const youtube = await Innertube.create({ retrieve_player: false });
 
 const playlist = await youtube.getPlaylist(
   "PLbiAZv0qcXO0mJNjtJ4Gdjb_T6ZZUnD8M",

@@ -11,7 +11,7 @@
   },
   "imports": {
     "lume/": "https://deno.land/x/lume@v2.5.3/",
-    "youtubei.js": "npm:youtubei.js@13.3.0",
+    "youtubei.js": "npm:youtubei.js@^13.4.0",
     "@bufbuild/protobuf": "npm:@bufbuild/protobuf"
   }
 }
