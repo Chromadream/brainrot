@@ -12,7 +12,7 @@ const temporary_items = Promise.all(
   playlist.items.slice(0,5).map(item => item.as(YTNodes.PlaylistVideo)).map(async (item) => {
     try {
       const info = await youtube.music.getInfo(item.id);
-      console.log(`Successfully retrieved info for ID ${item.id}`);
+      console.log(`Successfully retrieved info for ID ${item.id}, item details ${JSON.stringify(info.basic_info)}`);
       return info;
     } catch (error) {
       console.error(`Failed to get info for ID ${item.id}:`, error);
@@ -22,7 +22,8 @@ const temporary_items = Promise.all(
 );
 
 const items = (await  temporary_items)
-    .map((item) => item!.basic_info)
+    .map((item) => item?.basic_info)
+    .filter((item) => item != null)
     .map((item) => ({
     id: item.id,
     title: item.title,
