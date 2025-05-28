@@ -1,4 +1,4 @@
-import { Innertube, UniversalCache, YTNodes } from 'youtubei.js';
+import { Innertube, UniversalCache, YTNodes } from 'https://deno.land/x/youtubei@v13.4.0-deno/deno.ts';
 
 const youtube = await Innertube.create({ retrieve_player: false, cache: new UniversalCache(
   // Enables persistent caching
