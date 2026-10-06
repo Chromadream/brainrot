@@ -11,19 +11,59 @@
 
 const PLAYLIST_ID = "PLbiAZv0qcXO0mJNjtJ4Gdjb_T6ZZUnD8M";
 const LIMIT = 5;
-const FEED_URL =
-  `https://www.youtube.com/feeds/videos.xml?playlist_id=${PLAYLIST_ID}`;
+const FEED_PATH = `feeds/videos.xml?playlist_id=${PLAYLIST_ID}`;
 const OUT_URL = new URL("../_data/youtube.json", import.meta.url);
 
-// YouTube returns 404 or 500 to feed requests from cloud IP ranges when the
-// request looks like a script. Browser-like headers make the feed answer.
-// The retries ride out a throttled or slow response.
-const BROWSER_HEADERS: HeadersInit = {
-  "User-Agent":
-    "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
-  "Accept": "application/atom+xml,application/xml;q=0.9,*/*;q=0.8",
-  "Accept-Language": "en-US,en;q=0.9",
+const BROWSER_AGENT =
+  "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36";
+
+type FeedShape = {
+  name: string;
+  url: string;
+  headers: HeadersInit;
 };
+
+// YouTube answers the feed on GitHub runners for some request shapes and
+// returns 404 for others. The shapes are ordered by how well they worked in
+// the runner log. The refresh tries each shape in turn.
+const FEED_SHAPES: FeedShape[] = [
+  {
+    name: "browser",
+    url: `https://www.youtube.com/${FEED_PATH}`,
+    headers: {
+      "User-Agent": BROWSER_AGENT,
+      "Accept": "application/atom+xml,application/xml;q=0.9,*/*;q=0.8",
+      "Accept-Language": "en-US,en;q=0.9",
+    },
+  },
+  {
+    name: "consent",
+    url: `https://www.youtube.com/${FEED_PATH}`,
+    headers: {
+      "User-Agent": BROWSER_AGENT,
+      "Accept": "application/atom+xml,application/xml;q=0.9,*/*;q=0.8",
+      "Cookie": "CONSENT=YES+cb.20240101-00-p0.en+FX+410",
+    },
+  },
+  {
+    name: "agent-only",
+    url: `https://www.youtube.com/${FEED_PATH}`,
+    headers: { "User-Agent": BROWSER_AGENT },
+  },
+  {
+    name: "no-www",
+    url: `https://youtube.com/${FEED_PATH}`,
+    headers: {
+      "User-Agent": BROWSER_AGENT,
+      "Accept": "application/atom+xml,application/xml;q=0.9,*/*;q=0.8",
+    },
+  },
+  {
+    name: "star-accept",
+    url: `https://www.youtube.com/${FEED_PATH}`,
+    headers: { "User-Agent": BROWSER_AGENT, "Accept": "*/*" },
+  },
+];
 
 type Item = {
   id: string;
@@ -55,18 +95,18 @@ function tagText(block: string, tag: string): string {
   return match ? unescapeXml(match[1].trim()) : "";
 }
 
-async function fetchFeed(): Promise<Snapshot> {
-  const response = await fetch(FEED_URL, { headers: BROWSER_HEADERS });
+async function fetchFeed(shape: FeedShape): Promise<Snapshot> {
+  const response = await fetch(shape.url, { headers: shape.headers });
   if (!response.ok) {
     const body = (await response.text()).slice(0, 200).replaceAll("\n", " ");
-    throw new Error(`feed returned ${response.status}: ${body}`);
+    throw new Error(`returned ${response.status}: ${body}`);
   }
   const xml = await response.text();
 
   const entries = [...xml.matchAll(/<entry>([\s\S]*?)<\/entry>/g)]
     .map((match) => match[1]);
   if (entries.length === 0) {
-    throw new Error("feed contains no playlist entries");
+    throw new Error("contains no playlist entries");
   }
 
   const items = entries.slice(0, LIMIT).map((entry) => ({
@@ -83,7 +123,9 @@ async function fetchFeed(): Promise<Snapshot> {
   };
 }
 
-async function withRetry<T>(fetchOnce: () => Promise<T>): Promise<T> {
+// Walk the shapes in order. Wait and repeat the walk, for a throttle that
+// lifts in a few seconds.
+async function refreshFromFeed(): Promise<Snapshot> {
   const waits = [0, 2000, 5000];
   let lastError: unknown = new Error("the feed did not run");
 
@@ -91,14 +133,40 @@ async function withRetry<T>(fetchOnce: () => Promise<T>): Promise<T> {
     if (wait > 0) {
       await new Promise((resolve) => setTimeout(resolve, wait));
     }
-    try {
-      return await fetchOnce();
-    } catch (error) {
-      lastError = error;
-      console.error(`feed: ${(error as Error).message}`);
+    for (const shape of FEED_SHAPES) {
+      try {
+        const snapshot = await fetchFeed(shape);
+        if (shape.name !== FEED_SHAPES[0].name) {
+          console.log(`feed: the "${shape.name}" shape worked`);
+        }
+        return snapshot;
+      } catch (error) {
+        lastError = error;
+        console.error(`feed ${shape.name}: ${(error as Error).message}`);
+      }
     }
   }
   throw lastError;
+}
+
+// Print the answer from every request shape, so a failing runner shows which
+// shapes still work.
+async function probe(): Promise<void> {
+  let answered = 0;
+
+  for (const shape of FEED_SHAPES) {
+    try {
+      const snapshot = await fetchFeed(shape);
+      console.log(`probe ${shape.name}: ok, ${snapshot.items.length} item(s)`);
+      answered++;
+    } catch (error) {
+      console.error(`probe ${shape.name}: ${(error as Error).message}`);
+    }
+  }
+
+  if (answered === 0) {
+    Deno.exit(1);
+  }
 }
 
 function writeSnapshot(snapshot: Snapshot): void {
@@ -109,16 +177,10 @@ function writeSnapshot(snapshot: Snapshot): void {
 }
 
 if (Deno.args.includes("--probe")) {
-  try {
-    const snapshot = await fetchFeed();
-    console.log(`probe: feed ok, ${snapshot.items.length} item(s)`);
-  } catch (error) {
-    console.error(`probe: feed failed: ${(error as Error).message}`);
-    Deno.exit(1);
-  }
+  await probe();
 } else {
   try {
-    const snapshot = await withRetry(fetchFeed);
+    const snapshot = await refreshFromFeed();
     writeSnapshot(snapshot);
     console.log(
       `Wrote ${snapshot.items.length} item(s) to ${OUT_URL.pathname}`,
