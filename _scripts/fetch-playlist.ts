@@ -16,6 +16,11 @@ const OUT_URL = new URL("../_data/youtube.json", import.meta.url);
 
 const BROWSER_AGENT =
   "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36";
+const BROWSER_HEADERS: HeadersInit = {
+  "User-Agent": BROWSER_AGENT,
+  "Accept": "application/atom+xml,application/xml;q=0.9,*/*;q=0.8",
+  "Accept-Language": "en-US,en;q=0.9",
+};
 
 type FeedShape = {
   name: string;
@@ -30,18 +35,18 @@ const FEED_SHAPES: FeedShape[] = [
   {
     name: "browser",
     url: `https://www.youtube.com/${FEED_PATH}`,
-    headers: {
-      "User-Agent": BROWSER_AGENT,
-      "Accept": "application/atom+xml,application/xml;q=0.9,*/*;q=0.8",
-      "Accept-Language": "en-US,en;q=0.9",
-    },
+    headers: BROWSER_HEADERS,
+  },
+  {
+    name: "mobile",
+    url: `https://m.youtube.com/${FEED_PATH}`,
+    headers: BROWSER_HEADERS,
   },
   {
     name: "consent",
     url: `https://www.youtube.com/${FEED_PATH}`,
     headers: {
-      "User-Agent": BROWSER_AGENT,
-      "Accept": "application/atom+xml,application/xml;q=0.9,*/*;q=0.8",
+      ...BROWSER_HEADERS,
       "Cookie": "CONSENT=YES+cb.20240101-00-p0.en+FX+410",
     },
   },
@@ -53,10 +58,7 @@ const FEED_SHAPES: FeedShape[] = [
   {
     name: "no-www",
     url: `https://youtube.com/${FEED_PATH}`,
-    headers: {
-      "User-Agent": BROWSER_AGENT,
-      "Accept": "application/atom+xml,application/xml;q=0.9,*/*;q=0.8",
-    },
+    headers: BROWSER_HEADERS,
   },
   {
     name: "star-accept",
@@ -149,8 +151,8 @@ async function refreshFromFeed(): Promise<Snapshot> {
   throw lastError;
 }
 
-// Print the answer from every request shape, so a failing runner shows which
-// shapes still work.
+// Print the answer from every request shape, plus the playlist page, so a
+// failing runner shows which routes still answer.
 async function probe(): Promise<void> {
   let answered = 0;
 
@@ -162,6 +164,22 @@ async function probe(): Promise<void> {
     } catch (error) {
       console.error(`probe ${shape.name}: ${(error as Error).message}`);
     }
+  }
+
+  try {
+    const response = await fetch(
+      `https://www.youtube.com/playlist?list=${PLAYLIST_ID}`,
+      { headers: BROWSER_HEADERS },
+    );
+    const html = await response.text();
+    const ids = new Set(
+      [...html.matchAll(/"videoId":"([A-Za-z0-9_-]{11})"/g)].map((m) => m[1]),
+    );
+    console.log(
+      `probe playlist page: ${response.status}, ${ids.size} video id(s)`,
+    );
+  } catch (error) {
+    console.error(`probe playlist page: ${(error as Error).message}`);
   }
 
   if (answered === 0) {
