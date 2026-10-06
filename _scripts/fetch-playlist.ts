@@ -3,10 +3,10 @@
 // never calls YouTube.
 //
 // Data sources:
-//   - YouTube Data API v3, when YOUTUBE_API_KEY is set. Returns the playlist
-//     in playlist order.
-//   - The public playlist feed, otherwise. No credentials. Returns the 15
-//     most recently added videos, newest first.
+//   - The public playlist feed, by default. No credentials. Returns the top
+//     of the playlist in playlist order, capped at about 15 entries.
+//   - YouTube Data API v3, when YOUTUBE_API_KEY is set. The same order, with
+//     an explicit limit.
 //
 // Run with: deno task refresh
 // Probe the sources without writing data: deno task refresh --probe
