@@ -307,8 +307,9 @@ function exactMatch(
 
 // The storefronts to search. The United States storefront does not carry the
 // whole playlist, so the fetch asks several regional storefronts and merges
-// the answers.
-const ITUNES_STOREFRONTS = ["id", "au", "jp", "kr"];
+// the answers. The Korean storefront answers with no results, so it is not in
+// the list.
+const ITUNES_STOREFRONTS = ["id", "au", "jp"];
 
 // Ask iTunes for song candidates. The matcher decides which result is the
 // same song.
