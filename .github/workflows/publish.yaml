@@ -8,7 +8,7 @@ on:
   workflow_dispatch:
     inputs:
       probe:
-        description: Test the playlist feed. Does not write data.
+        description: Test the playlist sources. Does not write data.
         type: boolean
         default: false
 
@@ -37,7 +37,7 @@ jobs:
         with:
           deno-version: v2.x
 
-      - name: Probe the feed
+      - name: Probe the sources
         if: inputs.probe
         continue-on-error: true
         run: deno task refresh --probe
