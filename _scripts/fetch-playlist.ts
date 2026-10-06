@@ -10,11 +10,12 @@
 //   2. The playlist page. Larger, but it answers from those addresses.
 //
 // Either source gives the video id, title, author and a fallback thumbnail.
-// The fetch then looks for the square album art on the iTunes Search API,
-// which answers the GitHub runner. A TypeSafe Jev judgment picks the candidate
-// that is the same recording by the same artist, because exact string
-// equality misses featured artists, remixes, version suffixes and label
-// channel names. Without TYPESAFE_API_KEY, the exact rule runs instead.
+// The fetch then looks for the square album art on the iTunes Search API
+// across several regional storefronts, which answers the GitHub runner. A
+// TypeSafe Jev judgment picks the candidate that is the same recording by the
+// same artist, because exact string equality misses featured artists, remixes,
+// version suffixes and label channel names. Without TYPESAFE_API_KEY, the
+// exact rule runs instead.
 //
 // If no candidate gives an image, the feed or page thumbnail stays. A missing
 // image never stops the refresh.
@@ -304,6 +305,11 @@ function exactMatch(
   return null;
 }
 
+// The storefronts to search. The United States storefront does not carry the
+// whole playlist, so the fetch asks several regional storefronts and merges
+// the answers.
+const ITUNES_STOREFRONTS = ["id", "au", "jp", "kr"];
+
 // Ask iTunes for song candidates. The matcher decides which result is the
 // same song.
 async function itunesCandidates(
@@ -313,23 +319,45 @@ async function itunesCandidates(
   if (title === "" || author === "") {
     return [];
   }
-  try {
-    const artist = searchText(author) || author;
-    const song = searchText(title) || title;
-    const url = new URL(ITUNES_URL);
-    url.searchParams.set("term", `${artist} ${song}`);
-    url.searchParams.set("entity", "song");
-    url.searchParams.set("limit", "10");
+  const artist = searchText(author) || author;
+  const song = searchText(title) || title;
 
-    const response = await fetch(url, { headers: JSON_HEADERS });
-    if (!response.ok) {
-      return [];
+  const perStorefront = await Promise.all(
+    ITUNES_STOREFRONTS.map(async (country) => {
+      try {
+        const url = new URL(ITUNES_URL);
+        url.searchParams.set("term", `${artist} ${song}`);
+        url.searchParams.set("entity", "song");
+        url.searchParams.set("limit", "10");
+        url.searchParams.set("country", country);
+
+        const response = await fetch(url, { headers: JSON_HEADERS });
+        if (!response.ok) {
+          return [] as ItunesTrack[];
+        }
+        const body = await response.json() as { results?: ItunesTrack[] };
+        return body.results ?? [];
+      } catch {
+        return [] as ItunesTrack[];
+      }
+    }),
+  );
+
+  // One candidate per artist and track, so the same release from several
+  // storefronts does not fill the choice list.
+  const seen = new Set<string>();
+  const candidates: ItunesTrack[] = [];
+  for (const track of perStorefront.flat()) {
+    const key = `${normalize(track.artistName ?? "")}|${
+      normalize(track.trackName ?? "")
+    }`;
+    if (key === "|" || seen.has(key)) {
+      continue;
     }
-    const body = await response.json() as { results?: ItunesTrack[] };
-    return body.results ?? [];
-  } catch {
-    return [];
+    seen.add(key);
+    candidates.push(track);
   }
+  return candidates;
 }
 
 // TypeSafe Jev. It judges which iTunes candidate is the same song, because
@@ -555,6 +583,8 @@ async function enrichWithMusic(items: Item[]): Promise<Item[]> {
     if (candidate?.artworkUrl100) {
       results.set(item.index, {
         ...base,
+        // Prefer the catalogue artist name over the YouTube channel name.
+        author: candidate.artistName?.trim() || base.author,
         thumbnail: largerArtwork(candidate.artworkUrl100),
         thumbnailSource: picks !== null ? "itunes-jev" : "itunes-exact",
       });
