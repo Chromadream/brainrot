@@ -347,6 +347,14 @@ function largerArtwork(url: string): string {
 // the track or album name must be equal. Any other result returns null, so
 // the site keeps the YouTube thumbnail instead of the wrong cover. There is
 // no partial or fuzzy match.
+//
+// Future: a classifier can replace exact equality. String equality misses
+// featured artists, remixes, "(Official Video)" suffixes and label channels.
+// TypeSafe Jev (https://docs.typesafe.ai/, POST /v1/systemone) takes a choice
+// question and returns calibrated probabilities. Ask it whether an iTunes
+// result names the same track as the YouTube title and channel, then accept
+// above a confidence threshold. This needs TYPESAFE_API_KEY, so keep the
+// exact rule as the offline fallback.
 async function fetchItunesArt(
   title: string,
   author: string,
