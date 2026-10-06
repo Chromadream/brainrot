@@ -164,18 +164,6 @@ async function probe(apiKey: string | undefined): Promise<void> {
       run: () => fetchFeed(FEED_URL, {}),
     },
     { name: "feed, browser headers", run: () => fetchFeed(FEED_URL) },
-    {
-      name: "feed, no www",
-      run: () => fetchFeed(FEED_URL.replace("://www.", "://")),
-    },
-    {
-      name: "feed, consent cookie",
-      run: () =>
-        fetchFeed(FEED_URL, {
-          ...BROWSER_HEADERS,
-          Cookie: "CONSENT=YES+cb.20240101-00-p0.en+FX+410",
-        }),
-    },
   ];
 
   if (apiKey) {
