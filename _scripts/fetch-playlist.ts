@@ -9,12 +9,18 @@
 //      from some GitHub runner addresses.
 //   2. The playlist page. Larger, but it answers from those addresses.
 //
-// Either source gives the video id and a fallback title, author and
-// thumbnail. After that, each item is enriched from the YouTube Music watch
-// page. That page gives the artist name and the square album art that the
-// old innertube build used. It is a normal web page, not the innertube API,
-// so the GitHub runner addresses can reach it. If it cannot, the refresh
-// keeps the list values and still writes the file.
+// Either source gives the video id, title, author and a fallback thumbnail.
+// The fetch then tries two sources for the square album art that the old
+// innertube build showed:
+//   1. The YouTube Music watch page carries the album art in its Open Graph
+//      tags. This is a normal web page, not the innertube API. Google answers
+//      the GitHub runner with the generic site page instead, so this source
+//      usually gives nothing there.
+//   2. The iTunes Search API matches the artist and title and returns the
+//      same square album art. It answers the runner.
+//
+// If neither source gives an image, the feed or page thumbnail stays. A
+// missing image never stops the refresh.
 //
 // Run with: deno task refresh
 // Check every source without writing data: deno task refresh --probe
@@ -305,22 +311,99 @@ async function fetchMusicMeta(id: string): Promise<MusicMeta | null> {
   }
 }
 
-// Replace the list fields with the YouTube Music fields, one item at a time.
-// A missing answer keeps the fields the list source already has, so a blocked
-// music host only costs the album art and the artist name.
+// The iTunes Search API is a public, key-free source of the same square
+// album art. Google blocks the YouTube Music track page from the runner, so
+// this is the source that works there.
+const ITUNES_URL = "https://itunes.apple.com/search";
+
+const JSON_HEADERS: HeadersInit = {
+  "User-Agent": USER_AGENT,
+  "Accept": "application/json",
+};
+
+type ItunesTrack = {
+  artistName?: string;
+  trackName?: string;
+  collectionName?: string;
+  artworkUrl100?: string;
+};
+
+// Compare names without case, accents or punctuation, so "NMIXX" matches
+// "NMIXX" and "Heavy Serenade" matches "Heavy Serenade".
+function normalize(value: string): string {
+  return value
+    .toLowerCase()
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+}
+
+function largerArtwork(url: string): string {
+  return url.replace(/\/\d+x\d+bb\.jpg$/, "/600x600bb.jpg");
+}
+
+// Match on the artist and the track or album name. A weak match returns null,
+// so the site keeps the YouTube thumbnail instead of the wrong cover.
+async function fetchItunesArt(
+  title: string,
+  author: string,
+): Promise<string | null> {
+  if (title === "" || author === "") {
+    return null;
+  }
+  try {
+    const url = new URL(ITUNES_URL);
+    url.searchParams.set("term", `${author} ${title}`);
+    url.searchParams.set("entity", "song");
+    url.searchParams.set("limit", "10");
+
+    const response = await fetch(url, { headers: JSON_HEADERS });
+    if (!response.ok) {
+      return null;
+    }
+    const body = await response.json() as { results?: ItunesTrack[] };
+    const wantedTitle = normalize(title);
+    const wantedAuthor = normalize(author);
+
+    for (const track of body.results ?? []) {
+      if (normalize(track.artistName ?? "") !== wantedAuthor) continue;
+      const trackName = normalize(track.trackName ?? "");
+      const collectionName = normalize(track.collectionName ?? "");
+      if (trackName !== wantedTitle && collectionName !== wantedTitle) continue;
+      if (track.artworkUrl100) {
+        return largerArtwork(track.artworkUrl100);
+      }
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+// Try the YouTube Music track page first, then the iTunes artwork. Keep the
+// list fields when neither source has an image.
 async function enrichWithMusic(items: Item[]): Promise<Item[]> {
   return await Promise.all(items.map(async (item) => {
     const meta = await fetchMusicMeta(item.id);
-    if (meta === null) {
-      console.warn(`music: no metadata for ${item.id}, keeping list values`);
-      return item;
+    if (meta !== null) {
+      return {
+        id: item.id,
+        title: meta.title || item.title,
+        author: meta.author || item.author,
+        thumbnail: meta.thumbnail || item.thumbnail,
+      };
     }
-    return {
-      id: item.id,
-      title: meta.title || item.title,
-      author: meta.author || item.author,
-      thumbnail: meta.thumbnail || item.thumbnail,
-    };
+
+    const art = await fetchItunesArt(item.title, item.author);
+    if (art !== null) {
+      return { ...item, thumbnail: art };
+    }
+
+    console.warn(
+      `music: no album art for ${item.id}, keeping the video thumbnail`,
+    );
+    return item;
   }));
 }
 
@@ -348,17 +431,18 @@ async function probe(): Promise<void> {
 
   if (firstItem) {
     const meta = await fetchMusicMeta(firstItem.id);
-    if (meta) {
-      console.log(
-        `probe music: ok, ${firstItem.id} -> ${meta.author || "?"} / ${
-          meta.thumbnail || "?"
-        }`,
-      );
-    } else {
-      console.warn(
-        `probe music: no metadata for ${firstItem.id}, the refresh keeps the list values`,
-      );
-    }
+    console.log(
+      meta
+        ? `probe youtube music: ok, ${meta.author || "?"} / ${meta.thumbnail}`
+        : `probe youtube music: no track metadata for ${firstItem.id}`,
+    );
+
+    const art = await fetchItunesArt(firstItem.title, firstItem.author);
+    console.log(
+      art
+        ? `probe itunes: ok, ${art}`
+        : `probe itunes: no album art for "${firstItem.title}" by "${firstItem.author}"`,
+    );
   }
 
   if (answered === 0) {
