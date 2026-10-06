@@ -42,6 +42,13 @@ function thumbnailUrl(id: string): string {
   return `https://i.ytimg.com/vi/${id}/hqdefault.jpg`;
 }
 
+// Auto-generated artist channels are named "Artist - Topic" in the feed and
+// "Artist" on the page. Keep the page form, so a source change does not move
+// the data file.
+function cleanAuthor(name: string): string {
+  return name.replace(/ - Topic$/, "");
+}
+
 function unescapeXml(value: string): string {
   return value
     .replaceAll("&lt;", "<")
@@ -78,7 +85,7 @@ async function fetchFromFeed(): Promise<Snapshot> {
     return {
       id,
       title: tagText(entry, "media:title") || tagText(entry, "title"),
-      author: tagText(entry, "name"),
+      author: cleanAuthor(tagText(entry, "name")),
       thumbnail: thumbnailUrl(id),
     };
   }).filter((item) => item.id !== "");
@@ -188,8 +195,10 @@ async function fetchFromPage(): Promise<Snapshot> {
     items.push({
       id,
       title: metadata?.title?.content ?? "",
-      author: metadata?.metadata?.contentMetadataViewModel?.metadataRows?.[0]
-        ?.metadataParts?.[0]?.text?.content ?? "",
+      author: cleanAuthor(
+        metadata?.metadata?.contentMetadataViewModel?.metadataRows?.[0]
+          ?.metadataParts?.[0]?.text?.content ?? "",
+      ),
       thumbnail: thumbnailUrl(id),
     });
 
