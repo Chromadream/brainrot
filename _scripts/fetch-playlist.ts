@@ -343,8 +343,10 @@ function largerArtwork(url: string): string {
   return url.replace(/\/\d+x\d+bb\.jpg$/, "/600x600bb.jpg");
 }
 
-// Match on the artist and the track or album name. A weak match returns null,
-// so the site keeps the YouTube thumbnail instead of the wrong cover.
+// Accept only an exact match after normalize: the artist must be equal, and
+// the track or album name must be equal. Any other result returns null, so
+// the site keeps the YouTube thumbnail instead of the wrong cover. There is
+// no partial or fuzzy match.
 async function fetchItunesArt(
   title: string,
   author: string,
