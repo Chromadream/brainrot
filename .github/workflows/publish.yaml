@@ -40,9 +40,13 @@ jobs:
       - name: Probe the sources
         if: inputs.probe
         continue-on-error: true
+        env:
+          TYPESAFE_API_KEY: ${{ secrets.TYPESAFE_API_KEY }}
         run: deno task refresh --probe
 
       - name: Fetch playlist data
+        env:
+          TYPESAFE_API_KEY: ${{ secrets.TYPESAFE_API_KEY }}
         run: deno task refresh
 
       - name: Commit playlist data

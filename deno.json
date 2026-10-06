@@ -3,7 +3,7 @@
     "lume": "echo \"import 'lume/cli.ts'\" | deno run -A -",
     "build": "deno task lume",
     "serve": "deno task lume -s",
-    "refresh": "deno run --allow-net --allow-read --allow-write _scripts/fetch-playlist.ts"
+    "refresh": "deno run --allow-net --allow-read --allow-write --allow-env _scripts/fetch-playlist.ts"
   },
   "compilerOptions": {
     "types": [
