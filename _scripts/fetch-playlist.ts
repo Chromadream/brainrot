@@ -284,12 +284,21 @@ async function fetchMusicMeta(id: string): Promise<MusicMeta | null> {
       return null;
     }
     const tags = parseOpenGraph(await response.text());
+    const title = tags["og:title"] ?? "";
+    const image = tags["og:image"] ?? "";
     const author = tags["og:description"] ?? "";
 
+    // A bot or consent page carries the site name and no album art. Reject
+    // it whole, so the title does not become "YouTube Music" and the list
+    // values stay.
+    if (image === "" || title === "YouTube Music") {
+      return null;
+    }
+
     return {
-      title: tags["og:title"] ?? "",
+      title,
       author: looksLikeName(author) ? author.trim() : "",
-      thumbnail: sizedThumbnail(tags["og:image"] ?? ""),
+      thumbnail: sizedThumbnail(image),
     };
   } catch {
     return null;

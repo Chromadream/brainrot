@@ -1,0 +1,19 @@
+name: Diagnose the music source
+
+on:
+  workflow_dispatch:
+
+jobs:
+  diag:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Clone repository
+        uses: actions/checkout@v7
+
+      - name: Setup Deno environment
+        uses: denoland/setup-deno@22d081ff2d3a40755e97629de92e3bcbfa7cf2ed # v2.0.5
+        with:
+          deno-version: v2.x
+
+      - name: Run the diagnostic
+        run: deno run --allow-net _scripts/diag.ts
