@@ -16,7 +16,7 @@ layout: layout.vto
 </table>
 <footer>
   <p>
-    Last update checked at: {{(new Date()).toLocaleString('en-AU', {timeZone: "Australia/Melbourne"})}}.
+    Last update checked at: {{ new Date(youtube.fetchedAt).toLocaleString('en-AU', {timeZone: "Australia/Melbourne"}) }}.
     <br />
     Update is performed every midnight, UTC.
     <br />
