@@ -9,13 +9,22 @@
 //     most recently added videos, newest first.
 //
 // Run with: deno task refresh
-// Probe sources only, without writing: deno task refresh --probe
+// Probe the sources without writing data: deno task refresh --probe
 
 const PLAYLIST_ID = "PLbiAZv0qcXO0mJNjtJ4Gdjb_T6ZZUnD8M";
 const LIMIT = 5;
-const RSS_URL =
+const FEED_URL =
   `https://www.youtube.com/feeds/videos.xml?playlist_id=${PLAYLIST_ID}`;
 const OUT_URL = new URL("../_data/youtube.json", import.meta.url);
+
+// YouTube returns 500 to some requests from cloud IP ranges. A browser-like
+// set of headers makes the feed answer, and the retries ride out the rest.
+const BROWSER_HEADERS: HeadersInit = {
+  "User-Agent":
+    "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
+  "Accept": "application/atom+xml,application/xml;q=0.9,*/*;q=0.8",
+  "Accept-Language": "en-US,en;q=0.9",
+};
 
 type Item = {
   id: string;
@@ -48,17 +57,21 @@ function tagText(block: string, tag: string): string {
   return match ? unescapeXml(match[1].trim()) : "";
 }
 
-async function fetchRss(): Promise<Snapshot> {
-  const response = await fetch(RSS_URL);
+async function fetchFeed(
+  url: string,
+  headers: HeadersInit = BROWSER_HEADERS,
+): Promise<Snapshot> {
+  const response = await fetch(url, { headers });
   if (!response.ok) {
-    throw new Error(`RSS feed returned ${response.status}`);
+    const body = (await response.text()).slice(0, 200).replaceAll("\n", " ");
+    throw new Error(`${url} returned ${response.status}: ${body}`);
   }
   const xml = await response.text();
 
   const entries = [...xml.matchAll(/<entry>([\s\S]*?)<\/entry>/g)]
     .map((match) => match[1]);
   if (entries.length === 0) {
-    throw new Error("RSS feed contains no entries");
+    throw new Error(`${url} contains no playlist entries`);
   }
 
   const items = entries.slice(0, LIMIT).map((entry) => ({
@@ -85,8 +98,8 @@ async function fetchDataApi(apiKey: string): Promise<Snapshot> {
 
   const response = await fetch(url);
   if (!response.ok) {
-    throw new Error(`Data API returned ${response.status} ${await response
-      .text()}`);
+    const body = (await response.text()).slice(0, 200).replaceAll("\n", " ");
+    throw new Error(`Data API returned ${response.status}: ${body}`);
   }
   const body = await response.json();
 
@@ -121,30 +134,75 @@ async function fetchDataApi(apiKey: string): Promise<Snapshot> {
   };
 }
 
-async function probe(apiKey: string | undefined): Promise<void> {
-  let failures = 0;
+async function withRetry<T>(
+  label: string,
+  fetchOnce: () => Promise<T>,
+): Promise<T> {
+  const waits = [0, 2000, 5000];
+  let lastError: unknown = new Error(`${label} did not run`);
 
-  try {
-    const snapshot = await fetchRss();
-    console.log(`probe: rss ok, ${snapshot.items.length} item(s)`);
-  } catch (error) {
-    failures++;
-    console.error(`probe: rss failed: ${(error as Error).message}`);
+  for (const wait of waits) {
+    if (wait > 0) {
+      await new Promise((resolve) => setTimeout(resolve, wait));
+    }
+    try {
+      return await fetchOnce();
+    } catch (error) {
+      lastError = error;
+      console.error(`${label}: ${(error as Error).message}`);
+    }
   }
+  throw lastError;
+}
+
+// Print the status of each way to reach the playlist. A CI runner can get a
+// different answer than a workstation, so this runs in CI too.
+async function probe(apiKey: string | undefined): Promise<void> {
+  const attempts: Array<{ name: string; run: () => Promise<Snapshot> }> = [
+    {
+      name: "feed, no headers",
+      run: () => fetchFeed(FEED_URL, {}),
+    },
+    { name: "feed, browser headers", run: () => fetchFeed(FEED_URL) },
+    {
+      name: "feed, no www",
+      run: () => fetchFeed(FEED_URL.replace("://www.", "://")),
+    },
+    {
+      name: "feed, consent cookie",
+      run: () =>
+        fetchFeed(FEED_URL, {
+          ...BROWSER_HEADERS,
+          Cookie: "CONSENT=YES+cb.20240101-00-p0.en+FX+410",
+        }),
+    },
+  ];
 
   if (apiKey) {
-    try {
-      const snapshot = await fetchDataApi(apiKey);
-      console.log(`probe: data-api ok, ${snapshot.items.length} item(s)`);
-    } catch (error) {
-      failures++;
-      console.error(`probe: data-api failed: ${(error as Error).message}`);
-    }
-  } else {
-    console.log("probe: data-api skipped, YOUTUBE_API_KEY is not set");
+    attempts.push({
+      name: "data api",
+      run: () => fetchDataApi(apiKey),
+    });
   }
 
-  if (failures > 0) {
+  let failures = 0;
+  for (const attempt of attempts) {
+    try {
+      const snapshot = await attempt.run();
+      console.log(
+        `probe ${attempt.name}: ok, ${snapshot.items.length} item(s)`,
+      );
+    } catch (error) {
+      failures++;
+      console.error(`probe ${attempt.name}: ${(error as Error).message}`);
+    }
+  }
+
+  if (!apiKey) {
+    console.log("probe data api: skipped, YOUTUBE_API_KEY is not set");
+  }
+
+  if (failures === attempts.length) {
     Deno.exit(1);
   }
 }
@@ -161,15 +219,29 @@ const apiKey = Deno.env.get("YOUTUBE_API_KEY");
 if (Deno.args.includes("--probe")) {
   await probe(apiKey);
 } else {
-  try {
-    const snapshot = apiKey ? await fetchDataApi(apiKey) : await fetchRss();
-    writeSnapshot(snapshot);
-    console.log(
-      `Wrote ${snapshot.items.length} item(s) from ${snapshot.source} to ${OUT_URL.pathname}`,
-    );
-  } catch (error) {
-    console.error(`Refresh failed: ${(error as Error).message}`);
-    console.error("The committed snapshot is unchanged.");
+  const sources: Array<{ name: string; run: () => Promise<Snapshot> }> = [];
+  if (apiKey) {
+    sources.push({ name: "data api", run: () => fetchDataApi(apiKey) });
+  }
+  sources.push({ name: "feed", run: () => fetchFeed(FEED_URL) });
+
+  let written = false;
+  for (const source of sources) {
+    try {
+      const snapshot = await withRetry(source.name, source.run);
+      writeSnapshot(snapshot);
+      console.log(
+        `Wrote ${snapshot.items.length} item(s) from ${snapshot.source} to ${OUT_URL.pathname}`,
+      );
+      written = true;
+      break;
+    } catch (error) {
+      console.error(`${source.name} failed: ${(error as Error).message}`);
+    }
+  }
+
+  if (!written) {
+    console.error("Refresh failed. The committed snapshot is unchanged.");
     Deno.exit(1);
   }
 }

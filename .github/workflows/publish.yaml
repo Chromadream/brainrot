@@ -6,6 +6,11 @@ on:
   schedule:
     - cron: "00 00 * * *"
   workflow_dispatch:
+    inputs:
+      probe:
+        description: Test the data sources. Does not write data.
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -31,6 +36,11 @@ jobs:
         uses: denoland/setup-deno@22d081ff2d3a40755e97629de92e3bcbfa7cf2ed # v2.0.5
         with:
           deno-version: v2.x
+
+      - name: Probe data sources
+        if: inputs.probe
+        continue-on-error: true
+        run: deno task refresh --probe
 
       - name: Fetch playlist data
         run: deno task refresh
