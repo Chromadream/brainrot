@@ -11,6 +11,10 @@ on:
         description: Test the playlist sources. Does not write data.
         type: boolean
         default: false
+      image_match:
+        description: Match the Apple Music cover against the video thumbnail.
+        type: boolean
+        default: true
 
 permissions:
   contents: read
@@ -42,11 +46,13 @@ jobs:
         continue-on-error: true
         env:
           TYPESAFE_API_KEY: ${{ secrets.TYPESAFE_API_KEY }}
+          TYPESAFE_IMAGE_MATCH: ${{ github.event_name == 'workflow_dispatch' && inputs.image_match == false && '0' || '1' }}
         run: deno task refresh --probe
 
       - name: Fetch playlist data
         env:
           TYPESAFE_API_KEY: ${{ secrets.TYPESAFE_API_KEY }}
+          TYPESAFE_IMAGE_MATCH: ${{ github.event_name == 'workflow_dispatch' && inputs.image_match == false && '0' || '1' }}
         run: deno task refresh
 
       - name: Commit playlist data
