@@ -5,6 +5,8 @@ import date from "lume/plugins/date.ts";
 
 const site = lume();
 
+site.copy("story.css");
+
 site.use(attributes());
 site.use(base_path());
 site.use(date());

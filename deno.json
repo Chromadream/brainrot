@@ -1,7 +1,11 @@
 {
   "tasks": {
     "lume": "echo \"import 'lume/cli.ts'\" | deno run -A -",
-    "build": "deno task lume",
+    "build:html": "deno task lume",
+    "build": "deno task build:html && deno task story",
+    "browser:install": "deno run -A npm:playwright@1.64.1 install chromium",
+    "story": "deno run -A _scripts/render-story.ts",
+    "test": "deno test -A _scripts/",
     "serve": "deno task lume -s",
     "refresh": "deno run --allow-net --allow-read --allow-write --allow-env _scripts/fetch-playlist.ts"
   },
@@ -11,6 +15,7 @@
     ]
   },
   "imports": {
-    "lume/": "https://deno.land/x/lume@v2.5.3/"
+    "lume/": "https://deno.land/x/lume@v2.5.3/",
+    "playwright": "npm:playwright@1.64.1"
   }
 }

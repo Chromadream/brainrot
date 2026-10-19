@@ -1,0 +1,25 @@
+---
+title: Jon's brainrot
+layout: story-layout.vto
+url: /story/
+---
+
+{{ set items = youtube.items.slice(0, 3) }}
+<ol class="story-items" data-count="{{ items.length }}" aria-label="Top playlist tracks">
+  {{ for key, item of items }}
+    <li class="story-item" data-video-id="{{ item.id |> escape }}">
+      <span class="story-rank" aria-hidden="true">{{ parseInt(key) + 1 }}</span>
+      <img class="story-cover" src="{{ item.thumbnail |> escape }}" alt="Cover for {{ item.title |> escape }}" width="360" height="360">
+      <div class="story-track">
+        <p class="story-artist">{{ item.author |> escape }}</p>
+        <p class="story-title">{{ item.title |> escape }}</p>
+      </div>
+    </li>
+  {{ /for }}
+</ol>
+{{ if items.length === 0 }}
+  <p class="story-empty">No tracks in the playlist yet.</p>
+{{ /if }}
+<footer class="story-footer">
+  <p>Updated {{ new Date(youtube.fetchedAt).toLocaleString('en-AU', { timeZone: "Australia/Melbourne", dateStyle: "medium", timeStyle: "short" }) }}<br>Melbourne time</p>
+</footer>

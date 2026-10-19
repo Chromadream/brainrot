@@ -83,7 +83,13 @@ jobs:
         with:
           deno-version: v2.x
 
-      - name: Build site
+      - name: Install Chromium
+        run: deno task browser:install --with-deps
+
+      - name: Test Story export
+        run: deno task test
+
+      - name: Build site and Story image
         run: deno task build
 
       - name: Setup Pages
@@ -106,3 +112,10 @@ jobs:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v5
+
+      - name: Add Story download link
+        env:
+          PAGES_URL: ${{ steps.deployment.outputs.page_url }}
+        run: |
+          printf '## Instagram Story\n\n[Download the PNG](%s)\n' \
+            "${PAGES_URL%/}/story.png" >> "$GITHUB_STEP_SUMMARY"

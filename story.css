@@ -1,0 +1,102 @@
+.story-page {
+  margin: 0;
+}
+
+/* Fixed export canvas. The top and bottom 250px stay clear of Story controls. */
+.story {
+  width: 1080px;
+  height: 1920px;
+  max-width: none;
+  margin: 0;
+  padding: 250px 64px;
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+}
+
+.story h1 {
+  margin: 0;
+  font-size: 68px;
+  line-height: 1.15;
+}
+
+.story-items {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 32px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.story-item {
+  display: grid;
+  grid-template-columns: 52px 360px minmax(0, 1fr);
+  align-items: center;
+  gap: 24px;
+  min-height: 360px;
+}
+
+.story-rank {
+  font-size: 36px;
+  font-variant-numeric: tabular-nums;
+}
+
+.story-cover {
+  display: block;
+  width: 360px;
+  height: 360px;
+  object-fit: contain;
+}
+
+.story-track {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.story-artist {
+  margin: 0 0 16px;
+  font-size: 32px;
+  line-height: 1.25;
+}
+
+.story-title {
+  margin: 0;
+  font-size: 44px;
+  line-height: 1.15;
+  font-weight: bold;
+}
+
+.story-items[data-count="1"] .story-item {
+  grid-template-columns: 52px 480px minmax(0, 1fr);
+  min-height: 480px;
+}
+
+.story-items[data-count="1"] .story-cover {
+  width: 480px;
+  height: 480px;
+}
+
+.story-items[data-count="0"] {
+  display: none;
+}
+
+.story-empty {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  margin: 0;
+  font-size: 40px;
+}
+
+.story-footer {
+  text-align: left;
+  font-size: 28px;
+  line-height: 1.3;
+}
+
+.story-footer p {
+  margin: 0;
+}
