@@ -1,12 +1,26 @@
 {
   "items": [
     {
-      "id": "1l8WYhhTxeU",
-      "title": "Happy End",
-      "author": "Ryuichi Sakamoto",
-      "thumbnail": "https://is1-ssl.mzstatic.com/image/thumb/Music221/v4/31/09/7f/31097fa8-5087-cbaf-5ff9-bf99ec428788/4988064598359_cover.jpg/600x600bb.jpg",
+      "id": "xQnbLtpHtUo",
+      "title": "Cut U Off",
+      "author": "LLOUD Official",
+      "thumbnail": "https://i.ytimg.com/vi/xQnbLtpHtUo/hqdefault.jpg",
+      "thumbnailSource": "youtube-video"
+    },
+    {
+      "id": "nnIAsyb_0QI",
+      "title": "Graces of Heaven",
+      "author": "aran",
+      "thumbnail": "https://is1-ssl.mzstatic.com/image/thumb/Music112/v4/b3/8b/1a/b38b1aa9-9bf2-50fb-1adc-df4b81e7d586/859759003042_cover.jpg/600x600bb.jpg",
       "thumbnailSource": "itunes-cover"
+    },
+    {
+      "id": "bV-PMKWtPGs",
+      "title": "7 -Seven-",
+      "author": "FLOW Official YouTube Channel",
+      "thumbnail": "https://i.ytimg.com/vi/bV-PMKWtPGs/hqdefault.jpg",
+      "thumbnailSource": "youtube-video"
     }
   ],
-  "fetchedAt": "2026-10-25T02:09:17.287Z"
+  "fetchedAt": "2026-10-26T02:09:52.315Z"
 }
